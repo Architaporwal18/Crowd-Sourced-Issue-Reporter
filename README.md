@@ -1,0 +1,2 @@
+A community-focused web application that enables citizens to report municipal problems like potholes, broken streetlights, and traffic issues. Users can upload photos, use GPS/manual location input, and view all community reports on an interactive map with real-time filtering by issue type. Built with geolocation APIs, Leaflet.js mapping, and responsive design.
+Key Features: Photo upload with preview, GPS integration, interactive mapping, issue categorization, real-time filtering, mobile-responsive interface
