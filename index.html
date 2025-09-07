@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicReport - Community Issue Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .header h1 {
+            color: #333;
+            text-align: center;
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            text-align: center;
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            min-height: calc(100vh - 140px);
+        }
+        
+        .form-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+        }
+        
+        .map-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        
+        .form-title {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 1em;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .file-upload input[type=file] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-upload-label {
+            display: block;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload:hover .file-upload-label {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .image-preview {
+            margin-top: 10px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .image-preview img {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .location-btn {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .location-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+        }
+        
+        #map {
+            height: 500px;
+            border-radius: 15px;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .map-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .filter-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .issue-popup {
+            max-width: 250px;
+        }
+        
+        .issue-popup h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        
+        .issue-popup p {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .issue-popup img {
+            width: 100%;
+            max-height: 120px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-top: 8px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        .status-reported { background: #ffebee; color: #c62828; }
+        .status-in-progress { background: #fff3e0; color: #ef6c00; }
+        .status-resolved { background: #e8f5e8; color: #2e7d32; }
+        
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px 15px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .form-section, .map-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏛️ CivicReport</h1>
+        <p>Report civic issues and help improve your community</p>
+    </div>
+    
+    <div class="container">
+        <div class="form-section">
+            <h2 class="form-title">Report an Issue</h2>
+            <form id="issueForm">
+                <div class="form-group">
+                    <label for="issueType">Issue Type</label>
+                    <select id="issueType" required>
+                        <option value="">Select issue type</option>
+                        <option value="pothole">🕳️ Pothole</option>
+                        <option value="streetlight">💡 Broken Streetlight</option>
+                        <option value="traffic">🚦 Traffic Signal</option>
+                        <option value="sidewalk">🚶 Sidewalk Issue</option>
+                        <option value="graffiti">🎨 Graffiti</option>
+                        <option value="water">💧 Water/Drainage</option>
+                        <option value="other">❓ Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" placeholder="Describe the issue in detail..." required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" placeholder="Enter address or description" required>
+                    <button type="button" class="location-btn" onclick="getCurrentLocation()">📍 Use Current Location</button>
+                </div>
+                
+                <div class="form-group">
+                    <label>Upload Photo</label>
+                    <div class="file-upload">
+                        <input type="file" id="imageUpload" accept="image/*">
+                        <label for="imageUpload" class="file-upload-label">📸 Choose Image</label>
+                    </div>
+                    <div id="imagePreview" class="image-preview" style="display: none;"></div>
+                </div>
+                
+                <button type="submit" class="submit-btn">Submit Report</button>
+            </form>
+        </div>
+        
+        <div class="map-section">
+            <div class="map-controls">
+                <button class="filter-btn active" onclick="filterIssues('all')">All Issues</button>
+                <button class="filter-btn" onclick="filterIssues('pothole')">Potholes</button>
+                <button class="filter-btn" onclick="filterIssues('streetlight')">Streetlights</button>
+                <button class="filter-btn" onclick="filterIssues('traffic')">Traffic</button>
+                <button class="filter-btn" onclick="filterIssues('other')">Other</button>
+            </div>
+            <div id="map"></div>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([40.7128, -74.0060], 12);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Store issues
+        let issues = [];
+        let markers = [];
+        let currentFilter = 'all';
+        
+        // Issue type icons and colors
+        const issueConfig = {
+            pothole: { icon: '🕳️', color: '#d32f2f' },
+            streetlight: { icon: '💡', color: '#f57c00' },
+            traffic: { icon: '🚦', color: '#303f9f' },
+            sidewalk: { icon: '🚶', color: '#7b1fa2' },
+            graffiti: { icon: '🎨', color: '#c2185b' },
+            water: { icon: '💧', color: '#0097a7' },
+            other: { icon: '❓', color: '#5d4037' }
+        };
+        
+        // Create custom marker icons
+        function createCustomIcon(type) {
+            const config = issueConfig[type] || issueConfig.other;
+            return L.divIcon({
+                html: `<div style="background: ${config.color}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">${config.icon}</div>`,
+                className: 'custom-marker',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+        }
+        
+        // Sample data for demonstration
+        const sampleIssues = [
+            {
+                id: 1,
+                type: 'pothole',
+                description: 'Large pothole causing damage to vehicles',
+                location: 'Main Street & 5th Avenue',
+                lat: 40.7589,
+                lng: -73.9851,
+                status: 'reported',
+                image: null,
+                date: new Date().toLocaleDateString()
+            },
+            {
+                id: 2,
+                type: 'streetlight',
+                description: 'Street light has been out for 3 days',
+                location: 'Park Avenue & 42nd Street',
+                lat: 40.7505,
+                lng: -73.9776,
+                status: 'in-progress',
+                image: null,
+                date: new Date(Date.now() - 86400000).toLocaleDateString()
+            },
+            {
+                id: 3,
+                type: 'traffic',
+                description: 'Traffic light stuck on red',
+                location: 'Broadway & Times Square',
+                lat: 40.7580,
+                lng: -73.9855,
+                status: 'resolved',
+                image: null,
+                date: new Date(Date.now() - 172800000).toLocaleDateString()
+            }
+        ];
+        
+        // Load sample issues
+        issues = [...sampleIssues];
+        displayIssuesOnMap();
+        
+        // Handle image upload preview
+        document.getElementById('imageUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('imagePreview');
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Issue preview">`;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+                
+                // Update label
+                document.querySelector('.file-upload-label').textContent = `📸 ${file.name}`;
+            }
+        });
+        
+        // Get current location
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // Reverse geocode to get address
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById('location').value = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        })
+                        .catch(() => {
+                            document.getElementById('location').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        });
+                    
+                    // Center map on current location
+                    map.setView([lat, lng], 16);
+                    
+                    // Add temporary marker
+                    const tempMarker = L.marker([lat, lng])
+                        .addTo(map)
+                        .bindPopup('📍 Your current location')
+                        .openPopup();
+                    
+                    // Remove marker after 3 seconds
+                    setTimeout(() => map.removeLayer(tempMarker), 3000);
+                }, function(error) {
+                    alert('Unable to get your location. Please enter manually.');
+                });
+            } else {
+                alert('Geolocation is not supported by this browser.');
+            }
+        }
+        
+        // Handle form submission
+        document.getElementById('issueForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const type = document.getElementById('issueType').value;
+            const description = document.getElementById('description').value;
+            const location = document.getElementById('location').value;
+            const imageFile = document.getElementById('imageUpload').files[0];
+            
+            // Geocode address to get coordinates
+            geocodeAddress(location).then(coords => {
+                if (coords) {
+                    const newIssue = {
+                        id: issues.length + 1,
+                        type: type,
+                        description: description,
+                        location: location,
+                        lat: coords.lat,
+                        lng: coords.lng,
+                        status: 'reported',
+                        image: imageFile ? URL.createObjectURL(imageFile) : null,
+                        date: new Date().toLocaleDateString()
+                    };
+                    
+                    issues.push(newIssue);
+                    displayIssuesOnMap();
+                    
+                    // Reset form
+                    document.getElementById('issueForm').reset();
+                    document.getElementById('imagePreview').style.display = 'none';
+                    document.querySelector('.file-upload-label').textContent = '📸 Choose Image';
+                    
+                    // Center map on new issue
+                    map.setView([coords.lat, coords.lng], 16);
+                    
+                    alert('Issue reported successfully! 🎉');
+                } else {
+                    alert('Could not find location. Please check the address and try again.');
+                }
+            });
+        });
+        
+        // Geocode address
+        async function geocodeAddress(address) {
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    return {
+                        lat: parseFloat(data[0].lat),
+                        lng: parseFloat(data[0].lon)
+                    };
+                }
+            } catch (error) {
+                console.error('Geocoding error:', error);
+            }
+            return null;
+        }
+        
+        // Display issues on map
+        function displayIssuesOnMap() {
+            // Clear existing markers
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            
+            issues.forEach(issue => {
+                if (currentFilter === 'all' || issue.type === currentFilter) {
+                    const marker = L.marker([issue.lat, issue.lng], {
+                        icon: createCustomIcon(issue.type)
+                    }).addTo(map);
+                    
+                    const statusClass = `status-${issue.status}`;
+                    const popupContent = `
+                        <div class="issue-popup">
+                            <h3>${issue.type.charAt(0).toUpperCase() + issue.type.slice(1)} Issue</h3>
+                            <p><strong>Location:</strong> ${issue.location}</p>
+                            <p><strong>Description:</strong> ${issue.description}</p>
+                            <p><strong>Reported:</strong> ${issue.date}</p>
+                            <span class="status-badge ${statusClass}">${issue.status.replace('-', ' ').toUpperCase()}</span>
+                            ${issue.image ? `<img src="${issue.image}" alt="Issue image">` : ''}
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    markers.push(marker);
+                }
+            });
+        }
+        
+        // Filter issues
+        function filterIssues(type) {
+            currentFilter = type;
+            
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            displayIssuesOnMap();
+        }
+        
+        // Add click handler to map for adding issues
+        map.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            // Reverse geocode to fill location field
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('location').value = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                })
+                .catch(() => {
+                    document.getElementById('location').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                });
+        });
+    </script>
+</body>
+</html>
